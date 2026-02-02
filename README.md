@@ -3,6 +3,10 @@
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Status: Research](https://img.shields.io/badge/Status-Research-orange.svg)
 ![Version: 1.0.0](https://img.shields.io/badge/Version-1.0.0-green.svg)
+[![ORCID](https://img.shields.io/badge/Author-Daniel%20Sandner-blue?style=flat&logo=orcid)](https://orcid.org/0000-0002-1041-814X)
+
+**Author:** [Daniel Sandner](https://github.com/sandner-art)
+**Project:** [Metacryptography Research](https://metacryptography.openresearch.uk/)
 
 A real-time visualization and simulation platform exploring emergent ecological dynamics on fractal mathematical manifolds. This application demonstrates how computational agents exhibit complex behaviors when navigating multi-layered fractal properties: geometric (gradient fields), dynamic (escape velocity), and topological (iteration depth, local curvature).
 
@@ -29,6 +33,7 @@ A real-time visualization and simulation platform exploring emergent ecological 
 
 ---
 
+![screenshots Fractal Ecology by Daniel Sandner](social-preview.jpg)
 ## Overview
 
 **Fractal Ecology** is an interactive research tool that simulates prey-predator dynamics constrained to fractal iteration spaces. Unlike traditional agent-based models operating on Euclidean planes, agents here navigate the complex topology of fractal sets (Mandelbrot, Julia, Burning Ship, Tricorn, Nova, Cosine), responding to intrinsic mathematical properties that govern stability, chaos, and structural complexity.
