@@ -1,0 +1,1035 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<title>Fractal Ecology</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Oxanium:wght@300;400;500;600&family=Share+Tech+Mono&display=swap');
+
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+:root{
+  --bg:#04050a;
+  --panel:rgba(6,8,16,0.82);
+  --panel-border:rgba(100,180,255,0.1);
+  --accent:#5ba3e0;
+  --accent2:#a06ee0;
+  --prey:#3effa0;
+  --pred:#ff5e3a;
+  --text:#8fa8c2;
+  --text-hi:#cddce8;
+  --text-lo:#2e3a4a;
+  --slider-track:#1a2535;
+  --slider-fill:#5ba3e0;
+  --r:10px;
+}
+html,body{width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:'Oxanium',sans-serif;color:var(--text);user-select:none;touch-action:none;}
+
+/* ─── CANVAS ─── */
+#wrap{position:fixed;inset:0;}
+canvas{display:block;width:100%;height:100%;}
+
+/* ─── TOP BAR ─── */
+#topbar{position:fixed;top:0;left:0;right:0;padding:14px 18px;z-index:20;pointer-events:none;display:flex;justify-content:space-between;align-items:flex-start;}
+#top-left{display:flex;flex-direction:column;gap:3px;}
+#fractal-name{font-size:11px;font-weight:600;letter-spacing:3px;text-transform:uppercase;color:var(--text-hi);font-family:'Share Tech Mono',monospace;}
+#mode-badge{display:inline-block;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);font-family:'Share Tech Mono',monospace;border:1px solid rgba(91,163,224,0.3);border-radius:3px;padding:2px 6px;width:fit-content;margin-top:1px;}
+
+/* ─── REACTIVE METRICS ─── */
+#metrics{display:flex;flex-direction:column;gap:6px;align-items:flex-end;}
+.metric{display:flex;align-items:center;gap:6px;font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--text-lo);text-transform:uppercase;}
+.metric-bar{width:42px;height:3px;background:var(--slider-track);border-radius:2px;overflow:hidden;}
+.metric-fill{height:100%;border-radius:2px;transition:width 0.4s ease,background 0.6s ease;}
+
+/* ─── MODE TABS ─── */
+#tabs{position:fixed;bottom:0;left:0;right:0;padding:0 14px 28px;z-index:20;display:flex;justify-content:center;gap:6px;}
+.tab{background:var(--panel);border:1px solid var(--panel-border);border-radius:20px;padding:8px 16px;color:var(--text-lo);font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;cursor:pointer;transition:all 0.3s;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);pointer-events:auto;}
+.tab:hover{color:var(--text);border-color:rgba(91,163,224,0.35);}
+.tab.active{background:rgba(91,163,224,0.1);border-color:var(--accent);color:var(--accent);}
+
+/* ─── GEAR + EXPORT BUTTONS ─── */
+#btn-gear,#btn-export{position:fixed;z-index:20;width:36px;height:36px;border-radius:50%;border:1px solid var(--panel-border);background:var(--panel);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color 0.3s,transform 0.15s;color:var(--text-lo);}
+#btn-gear{bottom:28px;right:16px;}
+#btn-export{bottom:28px;right:60px;}
+#btn-gear:hover,#btn-export:hover{border-color:var(--accent);color:var(--accent);transform:scale(1.05);}
+#btn-gear svg,#btn-export svg{width:15px;height:15px;}
+
+/* ─── SETTINGS PANEL ─── */
+#panel{position:fixed;bottom:0;left:0;right:0;z-index:30;background:var(--panel);border-top:1px solid var(--panel-border);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);padding:0;max-height:0;overflow:hidden;transition:max-height 0.45s cubic-bezier(.4,0,.2,1),padding 0.45s cubic-bezier(.4,0,.2,1);}
+#panel.open{max-height:72vh;padding:18px 18px 32px;}
+#panel-handle{width:32px;height:3px;background:var(--text-lo);border-radius:2px;margin:0 auto 14px;display:none;}
+#panel.open #panel-handle{display:block;}
+
+.panel-section{margin-bottom:16px;}
+.panel-section:last-child{margin-bottom:0;}
+.section-label{font-family:'Share Tech Mono',monospace;font-size:7px;letter-spacing:2.5px;text-transform:uppercase;color:var(--text-lo);margin-bottom:8px;}
+
+/* Fractal chips */
+#fractal-chips{display:flex;flex-wrap:wrap;gap:5px;}
+.chip{background:rgba(255,255,255,0.04);border:1px solid var(--panel-border);border-radius:14px;padding:5px 11px;font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:1px;color:var(--text-lo);cursor:pointer;transition:all 0.25s;white-space:nowrap;}
+.chip:hover{border-color:rgba(91,163,224,0.4);color:var(--text);}
+.chip.active{background:rgba(91,163,224,0.12);border-color:var(--accent);color:var(--accent);}
+
+/* Sliders */
+.slider-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.slider-row label{font-family:'Share Tech Mono',monospace;font-size:7.5px;letter-spacing:1px;color:var(--text-lo);min-width:72px;text-transform:uppercase;}
+.slider-row .val{font-family:'Share Tech Mono',monospace;font-size:7.5px;color:var(--accent);min-width:30px;text-align:right;}
+input[type=range]{flex:1;-webkit-appearance:none;appearance:none;height:3px;background:var(--slider-track);border-radius:2px;outline:none;}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:12px;height:12px;border-radius:50%;background:var(--accent);cursor:pointer;box-shadow:0 0 6px rgba(91,163,224,0.4);}
+input[type=range]::-moz-range-thumb{width:12px;height:12px;border-radius:50%;background:var(--accent);cursor:pointer;border:none;box-shadow:0 0 6px rgba(91,163,224,0.4);}
+
+/* Dynamic params area */
+#dyn-params{min-height:0;overflow:hidden;transition:min-height 0.3s;}
+
+/* Palette chips */
+#palette-chips{display:flex;flex-wrap:wrap;gap:5px;}
+.pal-chip{width:28px;height:28px;border-radius:50%;border:2px solid transparent;cursor:pointer;transition:border-color 0.2s,transform 0.15s;position:relative;}
+.pal-chip:hover{transform:scale(1.12);}
+.pal-chip.active{border-color:var(--text-hi);}
+.pal-chip .swatch{width:100%;height:100%;border-radius:50%;overflow:hidden;}
+
+/* Export btn inside panel */
+#btn-panel-export{width:100%;padding:9px;background:rgba(91,163,224,0.1);border:1px solid rgba(91,163,224,0.3);border-radius:6px;color:var(--accent);font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:2px;cursor:pointer;transition:background 0.2s;}
+#btn-panel-export:hover{background:rgba(91,163,224,0.22);}
+
+/* ─── HINT ─── */
+#hint{position:fixed;bottom:62px;left:0;right:0;text-align:center;font-family:'Share Tech Mono',monospace;font-size:8px;letter-spacing:2px;color:var(--text-lo);pointer-events:none;opacity:1;transition:opacity 1.8s;}
+#hint.gone{opacity:0;}
+
+/* ─── FPS ─── */
+#fps{position:fixed;top:14px;left:50%;transform:translateX(-50%);font-family:'Share Tech Mono',monospace;font-size:7px;color:var(--text-lo);letter-spacing:1px;z-index:20;pointer-events:none;}
+
+/* scrollbar for panel */
+#panel::-webkit-scrollbar{width:3px;}
+#panel::-webkit-scrollbar-track{background:transparent;}
+#panel::-webkit-scrollbar-thumb{background:var(--text-lo);border-radius:2px;}
+</style>
+</head>
+<body>
+<div id="wrap"><canvas id="c"></canvas></div>
+
+<!-- TOP -->
+<div id="topbar">
+  <div id="top-left">
+    <div id="fractal-name">Mandelbrot</div>
+    <div id="mode-badge">2D Trail</div>
+  </div>
+  <div id="metrics">
+    <div class="metric"><span>Chaos</span><div class="metric-bar"><div class="metric-fill" id="m-chaos" style="width:30%;background:#ff6b3a;"></div></div></div>
+    <div class="metric"><span>Entropy</span><div class="metric-bar"><div class="metric-fill" id="m-entropy" style="width:50%;background:#5ba3e0;"></div></div></div>
+    <div class="metric"><span>Pressure</span><div class="metric-bar"><div class="metric-fill" id="m-pressure" style="width:20%;background:#a06ee0;"></div></div></div>
+  </div>
+</div>
+
+<div id="fps">— fps</div>
+
+<!-- BOTTOM TABS -->
+<div id="tabs">
+  <button class="tab active" data-mode="2d">2D</button>
+  <button class="tab" data-mode="3d">3D</button>
+  <button class="tab" data-mode="4d">4D</button>
+</div>
+
+<!-- GEAR + EXPORT -->
+<button id="btn-export" title="Export"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+<button id="btn-gear" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+
+<!-- SETTINGS PANEL -->
+<div id="panel">
+  <div id="panel-handle"></div>
+
+  <div class="panel-section">
+    <div class="section-label">Fractal</div>
+    <div id="fractal-chips"></div>
+  </div>
+
+  <div class="panel-section" id="dyn-params-section">
+    <div class="section-label">Parameters</div>
+    <div id="dyn-params"></div>
+  </div>
+
+  <div class="panel-section">
+    <div class="section-label">Ecology</div>
+    <div class="slider-row"><label>Prey</label><input type="range" id="sl-prey" min="2000" max="30000" step="1000" value="18000"/><span class="val" id="v-prey">18000</span></div>
+    <div class="slider-row"><label>Predators</label><input type="range" id="sl-pred" min="1000" max="12000" step="500" value="6000"/><span class="val" id="v-pred">6000</span></div>
+    <div class="slider-row"><label>Prey Climb</label><input type="range" id="sl-pclimb" min="0" max="100" value="25"/><span class="val" id="v-pclimb">25</span></div>
+    <div class="slider-row"><label>Prey Surf</label><input type="range" id="sl-psurf" min="0" max="100" value="12"/><span class="val" id="v-psurf">12</span></div>
+    <div class="slider-row"><label>Pred Band</label><input type="range" id="sl-rband" min="10" max="80" value="35"/><span class="val" id="v-rband">35</span></div>
+    <div class="slider-row"><label>Pred Patrol</label><input type="range" id="sl-rpatrol" min="0" max="100" value="55"/><span class="val" id="v-rpatrol">55</span></div>
+  </div>
+
+  <div class="panel-section">
+    <div class="section-label">Palette</div>
+    <div id="palette-chips"></div>
+  </div>
+
+  <div class="panel-section">
+    <button id="btn-panel-export">⬇ EXPORT IMAGE</button>
+  </div>
+</div>
+
+<div id="hint">DRAG PAN · SCROLL ZOOM · ⚙ SETTINGS</div>
+
+<!-- ===================================================================
+     JAVASCRIPT
+     =================================================================== -->
+<script>
+// ============================================================
+// 0. GLOBALS & CONFIG
+// ============================================================
+const canvas=document.getElementById('c'), ctx=canvas.getContext('2d');
+let W,H,DPR;
+// Trail buffers declaration (initialized later)
+let trail2d_prey, trail2d_pred;
+
+function resize(){
+  DPR=window.devicePixelRatio||1;
+  W=window.innerWidth; H=window.innerHeight;
+  canvas.width=W*DPR; canvas.height=H*DPR;
+  canvas.style.width=W+'px'; canvas.style.height=H+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  if(trail2d_prey) initTrails();
+}
+window.addEventListener('resize',resize);
+resize();
+
+// ============================================================
+// 1. FRACTAL DEFINITIONS
+// ============================================================
+const FRACTALS={
+  mandelbrot:{
+    name:'Mandelbrot',
+    defaultView:{cx:-0.5,cy:0,w:3.4},
+    presets:[
+      {label:'Seahorse',cx:-0.743643,cy:0.131825,w:0.005},
+      {label:'Elephant',cx:0.2825,cy:0.0085,w:0.035},
+      {label:'Mini Brot',cx:-1.7568,cy:0.0,w:0.0002},
+      {label:'Spiral',cx:-0.7443,cy:0.1383,w:0.002},
+      {label:'Double Spiral',cx:-0.7269,cy:0.1889,w:0.004},
+      {label:'San Marco',cx:-0.75,cy:0.1,w:0.03}
+    ],
+    params:[],
+    iterate(zr,zi,cr,ci,p){
+      return{zr:zr*zr-zi*zi+cr, zi:2*zr*zi+ci};
+    }
+  },
+  julia:{
+    name:'Julia Set',
+    defaultView:{cx:0,cy:0,w:3.2},
+    presets:[
+      {label:'Dendrite',cx:0,cy:0,w:3.2,params:{julia_cr:-0.4,julia_ci:0.6}},
+      {label:'Spiral',cx:0,cy:0,w:3.0,params:{julia_cr:-0.7269,julia_ci:0.1889}},
+      {label:'Dragon',cx:0,cy:0,w:3.4,params:{julia_cr:-0.8,julia_ci:0.156}},
+      {label:'Rabbit',cx:0,cy:0,w:3.0,params:{julia_cr:-0.123,julia_ci:0.745}},
+      {label:'Siegel',cx:0,cy:0,w:2.8,params:{julia_cr:-0.391,julia_ci:-0.587}},
+      {label:'Galaxy',cx:0,cy:0,w:3.2,params:{julia_cr:0.285,julia_ci:0.01}}
+    ],
+    params:[
+      {id:'julia_cr',label:'C real',min:-2,max:2,val:-0.7,step:0.01},
+      {id:'julia_ci',label:'C imag',min:-2,max:2,val:0.27015,step:0.01}
+    ],
+    iterate(zr,zi,cr,ci,p){
+      return{zr:zr*zr-zi*zi+p.julia_cr, zi:2*zr*zi+p.julia_ci};
+    }
+  },
+  burningship:{
+    name:'Burning Ship',
+    defaultView:{cx:-0.5,cy:0.5,w:3.4},
+    presets:[
+      {label:'Core',cx:-0.5,cy:-0.5,w:3.4},
+      {label:'Ship Detail',cx:-1.7548,cy:-0.0182,w:0.01},
+      {label:'Canopy',cx:-0.3,cy:-1.2,w:0.8},
+      {label:'Mast',cx:-1.755,cy:-0.028,w:0.003},
+      {label:'Antenna',cx:-1.7497,cy:-0.0001,w:0.0008},
+      {label:'Waves',cx:-1.62,cy:-0.04,w:0.12}
+    ],
+    params:[],
+    iterate(zr,zi,cr,ci,p){
+      const ar=Math.abs(zr), ai=Math.abs(zi);
+      return{zr:ar*ar-ai*ai+cr, zi:2*ar*ai+ci};
+    }
+  },
+  tricorn:{
+    name:'Tricorn',
+    defaultView:{cx:0,cy:0,w:3.4},
+    presets:[
+      {label:'Full',cx:0,cy:0,w:3.4},
+      {label:'Limb',cx:-0.15,cy:0.75,w:0.3},
+      {label:'Mini',cx:-1.1,cy:0.25,w:0.15},
+      {label:'Wing',cx:-0.4,cy:0.6,w:0.4},
+      {label:'Symmetry',cx:0,cy:0.88,w:0.25},
+      {label:'Detail',cx:-0.32,cy:0.03,w:0.08}
+    ],
+    params:[],
+    iterate(zr,zi,cr,ci,p){
+      // conjugate: z = conj(z)^2 + c → (zr - i*zi)^2 + c
+      return{zr:zr*zr-zi*zi+cr, zi:-2*zr*zi+ci};
+    }
+  },
+  nova:{
+    name:'Nova',
+    defaultView:{cx:0,cy:0,w:6},
+    presets:[
+      {label:'Classic',cx:0,cy:0,w:6,params:{nova_n:3,nova_ar:1,nova_ai:0}},
+      {label:'Zoom A',cx:0.5,cy:0.3,w:1.5,params:{nova_n:3,nova_ar:1,nova_ai:0}},
+      {label:'Zoom B',cx:-0.8,cy:0.2,w:2.0,params:{nova_n:3,nova_ar:1,nova_ai:0}},
+      {label:'Power 4',cx:0,cy:0,w:6,params:{nova_n:4,nova_ar:1,nova_ai:0}},
+      {label:'Power 5',cx:0,cy:0,w:6,params:{nova_n:5,nova_ar:0.8,nova_ai:0}},
+      {label:'Spiral Nova',cx:0,cy:0,w:5,params:{nova_n:3,nova_ar:0.7,nova_ai:0.5}}
+    ],
+    params:[
+      {id:'nova_n',label:'Power',min:2,max:8,val:3,step:0.5},
+      {id:'nova_ar',label:'A real',min:-2,max:2,val:1,step:0.05},
+      {id:'nova_ai',label:'A imag',min:-1,max:1,val:0,step:0.05}
+    ],
+    iterate(zr,zi,cr,ci,p){
+      const n=p.nova_n;
+      const ar=p.nova_ar, ai=p.nova_ai;
+      // z^n via repeated multiply
+      let pr=zr,pi=zi;
+      for(let k=1;k<n;k++){const t=pr*zr-pi*zi;pi=pr*zi+pi*zr;pr=t;}
+      // z^(n-1)
+      let qr=zr,qi=zi;
+      for(let k=1;k<n-1;k++){const t=qr*zr-qi*zi;qi=qr*zi+qi*zr;qr=t;}
+      // num = z^n - 1
+      const nr=pr-1, ni=pi;
+      // den = n * z^(n-1)
+      const dr=n*qr, di=n*qi;
+      // num/den (complex division)
+      const dm=dr*dr+di*di||1e-30;
+      const divr=(nr*dr+ni*di)/dm, divi=(ni*dr-nr*di)/dm;
+      // a * (num/den)
+      const mr=ar*divr-ai*divi, mi=ar*divi+ai*divr;
+      return{zr:zr-mr+cr, zi:zi-mi+ci};
+    }
+  },
+  cosine:{
+    name:'Cosine',
+    defaultView:{cx:0,cy:0,w:8},
+    presets:[
+      {label:'Wide',cx:0,cy:0,w:8,params:{cos_scale:1.5}},
+      {label:'Zoom',cx:0,cy:-1,w:3,params:{cos_scale:1.5}},
+      {label:'Deep',cx:1.2,cy:0.4,w:1.2,params:{cos_scale:1.5}},
+      {label:'Tight',cx:0,cy:0,w:8,params:{cos_scale:0.8}},
+      {label:'Chaotic',cx:0,cy:0,w:6,params:{cos_scale:2.3}},
+      {label:'Detail',cx:0.5,cy:-0.8,w:2.5,params:{cos_scale:1.8}}
+    ],
+    params:[
+      {id:'cos_scale',label:'Scale',min:0.5,max:3,val:1.5,step:0.1}
+    ],
+    iterate(zr,zi,cr,ci,p){
+      // z = scale * cos(z) + c  using cos(a+bi)=cos(a)cosh(b)+i(-sin(a)sinh(b))
+      const s=p.cos_scale;
+      const ca=Math.cos(zr)*Math.cosh(zi);
+      const cb=-Math.sin(zr)*Math.sinh(zi);
+      return{zr:s*ca+cr, zi:s*cb+ci};
+    }
+  }
+};
+
+// ============================================================
+// 2. PALETTE SYSTEM
+// ============================================================
+// Each palette: {name, prey(t,metrics), pred(t,metrics), bg(pot,cliff,metrics)}
+// t in [0,1], metrics={chaos,entropy,pressure}
+const PALETTES={
+  ember:{
+    name:'Ember',
+    swatch:['#1a0a00','#ff4500','#3effa0','#1a1a2e'],
+    prey:(t,m)=>[30+t*20+m.entropy*40, 200+t*55, 60+t*50],
+    pred:(t,m)=>[200+m.chaos*55, 70+m.pressure*60, 20+t*30],
+    bg:(pot,cliff,m)=>[8+pot*0.12+cliff*50+m.chaos*15, 4+pot*0.08+cliff*25, 2+pot*0.15+cliff*15]
+  },
+  arctic:{
+    name:'Arctic',
+    swatch:['#0a1628','#00d4ff','#b044ff','#0a0a1a'],
+    prey:(t,m)=>[10+m.chaos*30, 160+t*95, 200+m.entropy*55],
+    pred:(t,m)=>[140+m.pressure*80, 40+t*50, 220+m.chaos*35],
+    bg:(pot,cliff,m)=>[4+pot*0.1+cliff*18, 8+pot*0.14+cliff*35, 18+pot*0.2+cliff*60+m.chaos*12]
+  },
+  blood:{
+    name:'Blood',
+    swatch:['#0d0005','#cc0033','#ffcc00','#1a0808'],
+    prey:(t,m)=>[180+t*60+m.pressure*15, 180+t*75, 10+m.entropy*40],
+    pred:(t,m)=>[200+m.chaos*55, 15+t*30, 10+m.pressure*25],
+    bg:(pot,cliff,m)=>[12+pot*0.18+cliff*60+m.pressure*20, 3+pot*0.06+cliff*12, 5+pot*0.08+cliff*18]
+  },
+  deep:{
+    name:'Deep Ocean',
+    swatch:['#000a12','#00ffcc','#ff3399','#000818'],
+    prey:(t,m)=>[5+m.chaos*40, 220+t*35, 150+m.entropy*60],
+    pred:(t,m)=>[220+m.pressure*35, 20+m.chaos*60, 140+t*60],
+    bg:(pot,cliff,m)=>[2+pot*0.08+cliff*12, 10+pot*0.18+cliff*45+m.entropy*18, 22+pot*0.22+cliff*55]
+  },
+  void:{
+    name:'Void',
+    swatch:['#060306','#9933ff','#33ffcc','#060606'],
+    prey:(t,m)=>[40+m.chaos*50, 200+t*55, 180+m.entropy*40],
+    pred:(t,m)=>[150+m.pressure*70, 30+t*60, 240+m.chaos*15],
+    bg:(pot,cliff,m)=>[8+pot*0.12+cliff*30+m.pressure*14, 4+pot*0.07+cliff*22, 12+pot*0.16+cliff*48]
+  },
+  molten:{
+    name:'Molten',
+    swatch:['#0a0200','#ff8800','#ffffff','#120500'],
+    prey:(t,m)=>[220+t*35, 200+m.entropy*55, 50+t*100+m.chaos*40],
+    pred:(t,m)=>[240+m.chaos*15, 100+m.pressure*80, 10+t*40],
+    bg:(pot,cliff,m)=>[18+pot*0.2+cliff*70+m.chaos*22, 8+pot*0.14+cliff*40, 2+pot*0.08+cliff*20]
+  }
+};
+
+let activePalette='ember';
+
+// ============================================================
+// 3. VIEW STATE (zoom/pan)
+// ============================================================
+let view={cx:-0.5,cy:0,w:3.4}; // current fractal-space viewport
+let activeFractal='mandelbrot';
+
+// ============================================================
+// 4. FRACTAL FIELD COMPUTATION
+// ============================================================
+const FIELD_RES=256;
+let potential=new Float32Array(FIELD_RES*FIELD_RES);
+let gradX=new Float32Array(FIELD_RES*FIELD_RES);
+let gradY=new Float32Array(FIELD_RES*FIELD_RES);
+let cliffMap=new Float32Array(FIELD_RES*FIELD_RES);
+let fractalParams={}; // current dynamic params
+
+function buildField(){
+  const N=FIELD_RES, maxIter=150;
+  const hw=view.w/2;
+  const aspect=W/H;
+  const ww=view.w, hh=view.w/aspect;
+  const fdef=FRACTALS[activeFractal];
+
+  for(let iy=0;iy<N;iy++){
+    const ci=view.cy-hh/2+(iy/(N-1))*hh;
+    for(let ix=0;ix<N;ix++){
+      const cr=view.cx-ww/2+(ix/(N-1))*ww;
+      let zr=0,zi=0,iter=0;
+      const useJulia=(activeFractal==='julia');
+      if(useJulia){zr=cr;zi=ci;}
+      while(iter<maxIter){
+        const r2=zr*zr+zi*zi;
+        if(r2>1e4)break;
+        const nz=fdef.iterate(zr,zi,useJulia?fractalParams.julia_cr:cr,useJulia?fractalParams.julia_ci:ci,fractalParams);
+        zr=nz.zr;zi=nz.zi;
+        iter++;
+      }
+      let smooth=maxIter;
+      if(iter<maxIter) smooth=iter+1-Math.log2(Math.log(Math.sqrt(zr*zr+zi*zi)));
+      potential[iy*N+ix]=smooth;
+    }
+  }
+  // Gradient
+  for(let iy=0;iy<N;iy++) for(let ix=0;ix<N;ix++){
+    const idx=iy*N+ix;
+    const px=Math.min(ix+1,N-1), nx=Math.max(ix-1,0);
+    const py=Math.min(iy+1,N-1), ny=Math.max(iy-1,0);
+    gradX[idx]=(potential[iy*N+px]-potential[iy*N+nx])*0.5;
+    gradY[idx]=(potential[py*N+ix]-potential[ny*N+ix])*0.5;
+  }
+  let maxMag=0;
+  for(let i=0;i<N*N;i++){const m=Math.sqrt(gradX[i]*gradX[i]+gradY[i]*gradY[i]);if(m>maxMag)maxMag=m;}
+  for(let i=0;i<N*N;i++){
+    const m=Math.sqrt(gradX[i]*gradX[i]+gradY[i]*gradY[i]);
+    const inv=m>1e-9?1/m:0;
+    gradX[i]*=inv; gradY[i]*=inv;
+    cliffMap[i]=m/(maxMag||1);
+  }
+}
+
+// ============================================================
+// 5. AGENT SYSTEM
+// ============================================================
+let nPrey=18000, nPred=6000;
+let preyX,preyY,preyVx,preyVy;
+let predX,predY,predVx,predVy;
+// Ecology params
+let ePreyClimb=0.25, ePreysurf=0.12, ePredBand=35, ePredPatrol=0.55;
+
+// History for 3D/4D
+const MAX_HIST=160;
+let histPX=[],histPY=[],histRX=[],histRY=[];
+
+function initAgents(){
+  preyX=new Float32Array(nPrey);preyY=new Float32Array(nPrey);
+  preyVx=new Float32Array(nPrey);preyVy=new Float32Array(nPrey);
+  predX=new Float32Array(nPred);predY=new Float32Array(nPred);
+  predVx=new Float32Array(nPred);predVy=new Float32Array(nPred);
+  for(let i=0;i<nPrey;i++){preyX[i]=Math.random();preyY[i]=Math.random();preyVx[i]=(Math.random()-.5)*.01;preyVy[i]=(Math.random()-.5)*.01;}
+  for(let i=0;i<nPred;i++){predX[i]=Math.random();predY[i]=Math.random();predVx[i]=(Math.random()-.5)*.01;predVy[i]=(Math.random()-.5)*.01;}
+  histPX.length=histPY.length=histRX.length=histRY.length=0;
+}
+
+function sampleField(x01,y01){
+  const N=FIELD_RES;
+  const ix=Math.max(0,Math.min(N-1,(x01*(N-1))|0));
+  const iy=Math.max(0,Math.min(N-1,(y01*(N-1))|0));
+  const idx=iy*N+ix;
+  return{pot:potential[idx],gx:gradX[idx],gy:gradY[idx],cliff:cliffMap[idx]};
+}
+
+function stepAgents(){
+  const ps=0.004, rs=0.007;
+  const cl=ePreyClimb/100, su=ePreysurf/100, band=ePredBand, pat=ePredPatrol/100;
+
+  for(let i=0;i<nPrey;i++){
+    const s=sampleField(preyX[i],preyY[i]);
+    let fx=s.gx*cl*2.5 + (-s.gy)*su*1.2 + (Math.random()-.5)*.04;
+    let fy=s.gy*cl*2.5 + s.gx*su*1.2    + (Math.random()-.5)*.04;
+    preyVx[i]=preyVx[i]*.88+fx*.01;
+    preyVy[i]=preyVy[i]*.88+fy*.01;
+    let vm=Math.sqrt(preyVx[i]**2+preyVy[i]**2)||1e-9;
+    preyVx[i]=preyVx[i]/vm*ps; preyVy[i]=preyVy[i]/vm*ps;
+    preyX[i]=((preyX[i]+preyVx[i])%1+1)%1;
+    preyY[i]=((preyY[i]+preyVy[i])%1+1)%1;
+  }
+  for(let i=0;i<nPred;i++){
+    const s=sampleField(predX[i],predY[i]);
+    const diff=band-s.pot, sign=diff>0?1:-1;
+    let fx=s.gx*sign*.35 + (-s.gy)*pat*1.0 + (Math.random()-.5)*.03;
+    let fy=s.gy*sign*.35 + s.gx*pat*1.0   + (Math.random()-.5)*.03;
+    predVx[i]=predVx[i]*.90+fx*.012;
+    predVy[i]=predVy[i]*.90+fy*.012;
+    let vm=Math.sqrt(predVx[i]**2+predVy[i]**2)||1e-9;
+    predVx[i]=predVx[i]/vm*rs; predVy[i]=predVy[i]/vm*rs;
+    predX[i]=((predX[i]+predVx[i])%1+1)%1;
+    predY[i]=((predY[i]+predVy[i])%1+1)%1;
+  }
+
+  // History push
+  if(histPX.length>=MAX_HIST){histPX.shift();histPY.shift();histRX.shift();histRY.shift();}
+  histPX.push(new Float32Array(preyX));
+  histPY.push(new Float32Array(preyY));
+  histRX.push(new Float32Array(predX));
+  histRY.push(new Float32Array(predY));
+}
+
+// ============================================================
+// 6. REACTIVE METRICS
+// ============================================================
+let metrics={chaos:0, entropy:0, pressure:0};
+// smoothed versions
+let mSmooth={chaos:0,entropy:0,pressure:0};
+
+function computeMetrics(){
+  const N=FIELD_RES;
+  // Chaos: fraction of prey near high-cliff zones
+  let chaosSum=0;
+  for(let i=0;i<nPrey;i++){
+    const s=sampleField(preyX[i],preyY[i]);
+    chaosSum+=s.cliff;
+  }
+  metrics.chaos=chaosSum/nPrey;
+
+  // Entropy: spatial variance of prey positions
+  let mx=0,my=0;
+  for(let i=0;i<nPrey;i++){mx+=preyX[i];my+=preyY[i];}
+  mx/=nPrey;my/=nPrey;
+  let vx=0,vy=0;
+  for(let i=0;i<nPrey;i++){vx+=(preyX[i]-mx)**2;vy+=(preyY[i]-my)**2;}
+  metrics.entropy=Math.sqrt((vx+vy)/nPrey)*2.2; // scale to ~[0,1]
+
+  // Pressure: spatial overlap of prey and predators (grid-based)
+  // Quick approx: bin both into a small grid and measure overlap
+  const BG=16;
+  const pBin=new Uint16Array(BG*BG), rBin=new Uint16Array(BG*BG);
+  for(let i=0;i<nPrey;i++) pBin[((preyY[i]*BG)|0)*BG+((preyX[i]*BG)|0)]++;
+  for(let i=0;i<nPred;i++) rBin[((predY[i]*BG)|0)*BG+((predX[i]*BG)|0)]++;
+  let overlap=0, totalP=0;
+  for(let i=0;i<BG*BG;i++){overlap+=Math.min(pBin[i],rBin[i]);totalP+=pBin[i];}
+  metrics.pressure=totalP>0?overlap/totalP*6:0; // scale up
+
+  // Smooth
+  const a=0.08;
+  mSmooth.chaos+=(metrics.chaos-mSmooth.chaos)*a;
+  mSmooth.entropy+=(metrics.entropy-mSmooth.entropy)*a;
+  mSmooth.pressure+=(metrics.pressure-mSmooth.pressure)*a;
+}
+
+function updateMetricBars(){
+  const clamp=(v)=>Math.max(0,Math.min(1,v));
+  document.getElementById('m-chaos').style.width=(clamp(mSmooth.chaos)*100)+'%';
+  document.getElementById('m-entropy').style.width=(clamp(mSmooth.entropy)*100)+'%';
+  document.getElementById('m-pressure').style.width=(clamp(mSmooth.pressure)*100)+'%';
+  // Reactive color on the bars
+  const ci=clamp(mSmooth.chaos);
+  document.getElementById('m-chaos').style.background=`rgb(${200+ci*55},${80-ci*60},${30})`;
+  const ei=clamp(mSmooth.entropy);
+  document.getElementById('m-entropy').style.background=`rgb(${40+ei*60},${140+ei*80},${200+ei*55})`;
+  const pi=clamp(mSmooth.pressure);
+  document.getElementById('m-pressure').style.background=`rgb(${140+pi*80},${40+pi*50},${200+pi*40})`;
+}
+
+// ============================================================
+// 7. TRAIL BUFFERS (2D mode)
+// ============================================================
+function initTrails(){
+  trail2d_prey=new Float32Array(W*H);
+  trail2d_pred=new Float32Array(W*H);
+}
+
+// ============================================================
+// 8. RENDERING — 2D
+// ============================================================
+function render2D(){
+  // Decay
+  for(let i=0;i<trail2d_prey.length;i++){trail2d_prey[i]*=.984;trail2d_pred[i]*=.982;}
+  // Deposit
+  for(let i=0;i<nPrey;i++){const px=(preyX[i]*W)|0,py=(preyY[i]*H)|0;if(px>=0&&px<W&&py>=0&&py<H)trail2d_prey[py*W+px]+=2;}
+  for(let i=0;i<nPred;i++){const px=(predX[i]*W)|0,py=(predY[i]*H)|0;if(px>=0&&px<W&&py>=0&&py<H)trail2d_pred[py*W+px]+=3;}
+
+  const pal=PALETTES[activePalette];
+  const N=FIELD_RES;
+  const imgData=ctx.createImageData(W,H);
+  const d=imgData.data;
+  const aspect=W/H;
+  const ww=view.w, hh=view.w/aspect;
+
+  for(let py=0;py<H;py++){
+    const fy=(py/(H-1))*(N-1)|0;
+    const fiy=Math.min(N-1,fy);
+    for(let px=0;px<W;px++){
+      const fx=(px/(W-1))*(N-1)|0;
+      const fix=Math.min(N-1,fx);
+      const idx=fiy*N+fix;
+      const pot=potential[idx]/150;
+      const cliff=cliffMap[idx];
+
+      const bg=pal.bg(pot,cliff,mSmooth);
+      let r=bg[0],g=bg[1],b=bg[2];
+
+      // Prey trail
+      const pidx=py*W+px;
+      const pn=Math.min(trail2d_prey[pidx],60)/60;
+      if(pn>0){const pc=pal.prey(pn,mSmooth);r+=pc[0]*pn;g+=pc[1]*pn;b+=pc[2]*pn;}
+
+      // Pred trail
+      const rn=Math.min(trail2d_pred[pidx],80)/80;
+      if(rn>0){const rc=pal.pred(rn,mSmooth);r+=rc[0]*rn;g+=rc[1]*rn;b+=rc[2]*rn;}
+
+      const off=(py*W+px)*4;
+      d[off]=Math.min(255,r|0);d[off+1]=Math.min(255,g|0);d[off+2]=Math.min(255,b|0);d[off+3]=255;
+    }
+  }
+  ctx.putImageData(imgData,0,0);
+}
+
+// ============================================================
+// 9. RENDERING — 3D / 4D
+// ============================================================
+let cam={yaw:.5,pitch:.35,zoom:1};
+let camT={yaw:.5,pitch:.35,zoom:1};
+let autoRot=true;
+
+function render3D4D(is4d){
+  cam.yaw+=(camT.yaw-cam.yaw)*.07;
+  cam.pitch+=(camT.pitch-cam.pitch)*.07;
+  cam.zoom+=(camT.zoom-cam.zoom)*.07;
+  if(autoRot)camT.yaw+=.003;
+
+  const cosY=Math.cos(cam.yaw),sinY=Math.sin(cam.yaw);
+  const cosP=Math.cos(cam.pitch),sinP=Math.sin(cam.pitch);
+
+  const nF=histPX.length;
+  if(nF<2)return;
+
+  const stride=Math.max(1,(nF/80)|0);
+  const dens=new Float32Array(W*H);
+  const energy=new Float32Array(W*H);
+  const hue4=new Float32Array(W*H);
+
+  const sr=4; // agent sample stride
+
+  for(let fi=0;fi<nF;fi+=stride){
+    const t01=fi/(nF-1);
+    const zD=(t01-.5)*1.3;
+    const nfi=Math.min(fi+stride,nF-1);
+    const fov=2.5+cam.zoom*.8;
+    const zm=cam.zoom;
+
+    // PREY
+    for(let i=0;i<nPrey;i+=sr){
+      let x=histPX[fi][i]-.5, y=histPY[fi][i]-.5, z=zD;
+      const dx=histPX[nfi][i]-histPX[fi][i], dy=histPY[nfi][i]-histPY[fi][i];
+      const vel=Math.sqrt(dx*dx+dy*dy);
+      let rx=x*cosY-z*sinY, rz=x*sinY+z*cosY;
+      let ry=y*cosP-rz*sinP, rzz=y*sinP+rz*cosP;
+      const sc=fov/(fov+rzz); rx*=sc;ry*=sc;
+      const px=((rx*320*zm)+W*.5)|0, py=((-ry*320*zm)+H*.5)|0;
+      if(px<0||px>=W||py<0||py>=H)continue;
+      const pidx=py*W+px;
+      const w=1-t01*.25;
+      dens[pidx]+=w;
+      energy[pidx]+=vel*w*80;
+      hue4[pidx]+=t01*w;
+    }
+    // PRED
+    for(let i=0;i<nPred;i+=sr){
+      let x=histRX[fi][i]-.5, y=histRY[fi][i]-.5, z=zD;
+      const dx=histRX[nfi][i]-histRX[fi][i], dy=histRY[nfi][i]-histRY[fi][i];
+      const vel=Math.sqrt(dx*dx+dy*dy);
+      let rx=x*cosY-z*sinY, rz=x*sinY+z*cosY;
+      let ry=y*cosP-rz*sinP, rzz=y*sinP+rz*cosP;
+      const sc=fov/(fov+rzz); rx*=sc;ry*=sc;
+      const px=((rx*320*zm)+W*.5)|0, py=((-ry*320*zm)+H*.5)|0;
+      if(px<0||px>=W||py<0||py>=H)continue;
+      const pidx=py*W+px;
+      const w=1-t01*.15;
+      dens[pidx]+=w*1.4;
+      energy[pidx]-=vel*w*120;
+      hue4[pidx]+=(t01+.5)*w;
+    }
+  }
+
+  // Composite
+  const pal=PALETTES[activePalette];
+  let maxD=0;
+  for(let i=0;i<W*H;i++)if(dens[i]>maxD)maxD=dens[i];
+  if(maxD<1)maxD=1;
+  const logMax=Math.log(maxD+1);
+
+  const imgData=ctx.createImageData(W,H);
+  const d=imgData.data;
+  const N=FIELD_RES;
+
+  for(let i=0;i<W*H;i++){
+    const bright=Math.pow(Math.log(dens[i]+1)/logMax,.55);
+    const e=energy[i];
+    const isPred=e<0;
+    const eNorm=Math.min(Math.abs(e)/(maxD*2+1),1);
+
+    let r,g,b;
+    if(is4d){
+      const h4=dens[i]>0?(hue4[i]/dens[i]):0;
+      const hue=((h4*280+(isPred?20:140))%360)/360;
+      const sat=.7+eNorm*.3;
+      const lit=bright*.7;
+      const c=hslRgb(hue,sat,lit);
+      r=c[0];g=c[1];b=c[2];
+    } else {
+      const t=eNorm;
+      if(isPred){const c=pal.pred(t,mSmooth);r=c[0]*bright;g=c[1]*bright;b=c[2]*bright;}
+      else{const c=pal.prey(t,mSmooth);r=c[0]*bright;g=c[1]*bright;b=c[2]*bright;}
+    }
+
+    // subtle bg bleed
+    const px2=i%W, py2=(i/W)|0;
+    const fx=((px2/(W-1))*(N-1))|0, fy=((py2/(H-1))*(N-1))|0;
+    const pot=potential[Math.min(fy,N-1)*N+Math.min(fx,N-1)]/150;
+    const bg=pal.bg(pot,cliffMap[Math.min(fy,N-1)*N+Math.min(fx,N-1)],mSmooth);
+    r+=bg[0]*.08;g+=bg[1]*.08;b+=bg[2]*.08;
+
+    const off=i*4;
+    d[off]=Math.min(255,r|0);d[off+1]=Math.min(255,g|0);d[off+2]=Math.min(255,b|0);d[off+3]=255;
+  }
+  ctx.putImageData(imgData,0,0);
+}
+
+function hslRgb(h,s,l){
+  let r,g,b;
+  if(!s){r=g=b=l;}
+  else{
+    const h2r=(p,q,t)=>{if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<.5)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;};
+    const q=l<.5?l*(1+s):l+s-l*s, p=2*l-q;
+    r=h2r(p,q,h+1/3);g=h2r(p,q,h);b=h2r(p,q,h-1/3);
+  }
+  return[r*255,g*255,b*255];
+}
+
+// ============================================================
+// 10. INPUT — PAN / ZOOM (2D) + ORBIT (3D/4D)
+// ============================================================
+let mode='2d';
+let drag={active:false,sx:0,sy:0,startCx:0,startCy:0};
+let pinchDist=0;
+
+function screenToFractal(sx,sy){
+  const aspect=W/H;
+  const ww=view.w, hh=view.w/aspect;
+  return{
+    fx:view.cx-ww/2+(sx/W)*ww,
+    fy:view.cy+hh/2-(sy/H)*hh
+  };
+}
+
+function onDown(x,y){
+  drag.active=true;drag.sx=x;drag.sy=y;
+  drag.startCx=view.cx;drag.startCy=view.cy;
+  if(mode!=='2d')autoRot=false;
+}
+function onMove(x,y){
+  if(!drag.active)return;
+  const dx=x-drag.sx, dy=y-drag.sy;
+  if(mode==='2d'){
+    // Pan: translate view
+    const aspect=W/H;
+    const ww=view.w, hh=view.w/aspect;
+    view.cx=drag.startCx-(dx/W)*ww;
+    view.cy=drag.startCy+(dy/H)*hh;
+    needFieldRebuild=true;
+  } else {
+    camT.yaw+=(x-drag.sx)*.006;
+    camT.pitch+=(y-drag.sy)*.004;
+    camT.pitch=Math.max(-1.3,Math.min(1.3,camT.pitch));
+    drag.sx=x;drag.sy=y;
+  }
+}
+function onUp(){
+  drag.active=false;
+  if(mode!=='2d')setTimeout(()=>{autoRot=true;},3500);
+}
+
+// Zoom (scroll / pinch)
+let needFieldRebuild=false;
+function zoomAt(cx,cy,factor){
+  if(mode!=='2d'){
+    camT.zoom*=factor;
+    camT.zoom=Math.max(.3,Math.min(4,camT.zoom));
+    return;
+  }
+  // Zoom toward mouse/touch point in fractal space
+  const f=screenToFractal(cx,cy);
+  const newW=view.w*factor;
+  view.cx=f.fx+(view.cx-f.fx)*(newW/view.w);
+  view.cy=f.fy+(view.cy-f.fy)*(newW/view.w);
+  view.w=newW;
+  needFieldRebuild=true;
+}
+
+canvas.addEventListener('mousedown',e=>onDown(e.clientX,e.clientY));
+canvas.addEventListener('mousemove',e=>onMove(e.clientX,e.clientY));
+canvas.addEventListener('mouseup',onUp);
+canvas.addEventListener('mouseleave',onUp);
+
+canvas.addEventListener('touchstart',e=>{
+  e.preventDefault();
+  if(e.touches.length===1)onDown(e.touches[0].clientX,e.touches[0].clientY);
+  if(e.touches.length===2){
+    pinchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    drag.active=false;
+  }
+},{passive:false});
+canvas.addEventListener('touchmove',e=>{
+  e.preventDefault();
+  if(e.touches.length===1&&drag.active)onMove(e.touches[0].clientX,e.touches[0].clientY);
+  if(e.touches.length===2){
+    const nd=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    if(pinchDist>0){
+      const midX=(e.touches[0].clientX+e.touches[1].clientX)/2;
+      const midY=(e.touches[0].clientY+e.touches[1].clientY)/2;
+      zoomAt(midX,midY,pinchDist/nd);
+    }
+    pinchDist=nd;
+  }
+},{passive:false});
+canvas.addEventListener('touchend',e=>{
+  e.preventDefault();
+  if(e.touches.length===0){onUp();pinchDist=0;}
+  else if(e.touches.length===1)onDown(e.touches[0].clientX,e.touches[0].clientY);
+},{passive:false});
+canvas.addEventListener('wheel',e=>{
+  e.preventDefault();
+  zoomAt(e.clientX,e.clientY,e.deltaY<0?0.92:1.09);
+},{passive:false});
+
+// ============================================================
+// 11. UI WIRING
+// ============================================================
+// Mode tabs
+document.querySelectorAll('.tab').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    mode=btn.dataset.mode;
+    document.getElementById('mode-badge').textContent=mode==='2d'?'2D Trail':mode==='3d'?'3D Volume':'4D Spectrum';
+    if(mode==='2d'){initTrails();needFieldRebuild=true;}
+    else{camT.yaw=.5;camT.pitch=.35;camT.zoom=1;autoRot=true;}
+  });
+});
+
+// Gear panel toggle
+const panel=document.getElementById('panel');
+document.getElementById('btn-gear').addEventListener('click',()=>panel.classList.toggle('open'));
+
+// Fractal chips
+const fractalChipsEl=document.getElementById('fractal-chips');
+Object.keys(FRACTALS).forEach(key=>{
+  const frac=FRACTALS[key];
+  // Main chip
+  const chip=document.createElement('button');
+  chip.className='chip'+(key==='mandelbrot'?' active':'');
+  chip.dataset.fractal=key;
+  chip.textContent=frac.name;
+  chip.addEventListener('click',()=>{
+    document.querySelectorAll('.chip[data-fractal]').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    activeFractal=key;
+    view={...frac.defaultView};
+    // Reset fractal params
+    fractalParams={};
+    frac.params.forEach(p=>{fractalParams[p.id]=p.val;});
+    buildDynParams();
+    document.getElementById('fractal-name').textContent=frac.name;
+    initAgents();
+    if(mode==='2d')initTrails();
+    needFieldRebuild=true;
+  });
+  fractalChipsEl.appendChild(chip);
+
+  // Preset sub-chips
+  frac.presets.forEach(pre=>{
+    const pchip=document.createElement('button');
+    pchip.className='chip';
+    pchip.style.fontSize='7px';
+    pchip.style.padding='3px 8px';
+    pchip.style.opacity='.6';
+    pchip.textContent=pre.label;
+    pchip.addEventListener('click',e=>{
+      e.stopPropagation();
+      // Ensure fractal is active
+      document.querySelectorAll('.chip[data-fractal]').forEach(c=>c.classList.remove('active'));
+      chip.classList.add('active');
+      activeFractal=key;
+      fractalParams={};
+      FRACTALS[key].params.forEach(p=>{fractalParams[p.id]=p.val;});
+      // Override with preset params if provided
+      if(pre.params){
+        Object.assign(fractalParams, pre.params);
+      }
+      view={cx:pre.cx,cy:pre.cy,w:pre.w};
+      document.getElementById('fractal-name').textContent=frac.name;
+      buildDynParams();
+      initAgents();
+      if(mode==='2d')initTrails();
+      needFieldRebuild=true;
+    });
+    fractalChipsEl.appendChild(pchip);
+  });
+});
+
+// Dynamic params builder
+function buildDynParams(){
+  const el=document.getElementById('dyn-params');
+  el.innerHTML='';
+  const frac=FRACTALS[activeFractal];
+  if(!frac.params.length){
+    document.getElementById('dyn-params-section').style.display='none';
+    return;
+  }
+  document.getElementById('dyn-params-section').style.display='block';
+  frac.params.forEach(p=>{
+    const row=document.createElement('div');
+    row.className='slider-row';
+    row.innerHTML=`<label>${p.label}</label><input type="range" min="${p.min}" max="${p.max}" step="${p.step}" value="${fractalParams[p.id]!=null?fractalParams[p.id]:p.val}"/><span class="val">${(fractalParams[p.id]!=null?fractalParams[p.id]:p.val).toFixed(2)}</span>`;
+    const sl=row.querySelector('input');
+    const vl=row.querySelector('.val');
+    sl.addEventListener('input',()=>{
+      fractalParams[p.id]=parseFloat(sl.value);
+      vl.textContent=parseFloat(sl.value).toFixed(2);
+      needFieldRebuild=true;
+    });
+    el.appendChild(row);
+  });
+}
+buildDynParams();
+
+// Ecology sliders
+function wireSlider(id,valId,setter){
+  const sl=document.getElementById(id);
+  const vl=document.getElementById(valId);
+  sl.addEventListener('input',()=>{vl.textContent=sl.value;setter(parseFloat(sl.value));});
+}
+wireSlider('sl-prey','v-prey',v=>{nPrey=v;initAgents();if(mode==='2d')initTrails();});
+wireSlider('sl-pred','v-pred',v=>{nPred=v;initAgents();if(mode==='2d')initTrails();});
+wireSlider('sl-pclimb','v-pclimb',v=>{ePreyClimb=v;});
+wireSlider('sl-psurf','v-psurf',v=>{ePreysurf=v;});
+wireSlider('sl-rband','v-rband',v=>{ePredBand=v;});
+wireSlider('sl-rpatrol','v-rpatrol',v=>{ePredPatrol=v;});
+
+// Palette chips
+const palChipsEl=document.getElementById('palette-chips');
+Object.keys(PALETTES).forEach(key=>{
+  const pal=PALETTES[key];
+  const chip=document.createElement('div');
+  chip.className='pal-chip'+(key==='ember'?' active':'');
+  // Build swatch as a tiny gradient circle
+  const sw=document.createElement('div');
+  sw.className='swatch';
+  const colors=pal.swatch;
+  sw.style.background=`linear-gradient(135deg,${colors[0]} 0%,${colors[1]} 33%,${colors[2]} 66%,${colors[3]} 100%)`;
+  chip.appendChild(sw);
+  chip.title=pal.name;
+  chip.addEventListener('click',()=>{
+    document.querySelectorAll('.pal-chip').forEach(c=>c.classList.remove('active'));
+    chip.classList.add('active');
+    activePalette=key;
+    if(mode==='2d')initTrails();
+  });
+  palChipsEl.appendChild(chip);
+});
+
+// Export
+function exportImage(){
+  const link=document.createElement('a');
+  const ts=new Date().toISOString().replace(/[:.]/g,'-').slice(0,19);
+  link.download=`fractal-ecology_${activeFractal}_${mode}_${ts}.png`;
+  link.href=canvas.toDataURL('image/png');
+  link.click();
+}
+document.getElementById('btn-export').addEventListener('click',exportImage);
+document.getElementById('btn-panel-export').addEventListener('click',exportImage);
+
+// Hint
+setTimeout(()=>document.getElementById('hint').classList.add('gone'),3500);
+
+// ============================================================
+// 12. MAIN LOOP
+// ============================================================
+let lastFps=0,fpsCount=0,fpsTime=performance.now();
+let fieldDirty=true; // force first build
+
+function loop(){
+  // Rebuild field if needed
+  if(needFieldRebuild||fieldDirty){
+    buildField();
+    needFieldRebuild=false;
+    fieldDirty=false;
+  }
+
+  // Step
+  stepAgents();
+  computeMetrics();
+  updateMetricBars();
+
+  // Render
+  if(mode==='2d')render2D();
+  else render3D4D(mode==='4d');
+
+  // FPS
+  fpsCount++;
+  const now=performance.now();
+  if(now-fpsTime>1000){lastFps=fpsCount;fpsCount=0;fpsTime=now;}
+  document.getElementById('fps').textContent=lastFps+' fps';
+
+  requestAnimationFrame(loop);
+}
+
+// ============================================================
+// 13. INIT
+// ============================================================
+// Set initial fractal params
+FRACTALS[activeFractal].params.forEach(p=>{fractalParams[p.id]=p.val;});
+// Set seahorse valley as default view for mandelbrot
+view={cx:-0.743643,cy:0.131825,w:0.005};
+initAgents();
+initTrails();
+buildField();
+// Warm up
+for(let i=0;i<50;i++)stepAgents();
+
+loop();
+</script>
+</body>
+</html>
