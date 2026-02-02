@@ -4,7 +4,7 @@
 [![ORCID](https://img.shields.io/badge/Author-Daniel%20Sandner-blue?style=flat&logo=orcid)](https://orcid.org/0000-0002-1041-814X)
 
 **Author:** [Daniel Sandner](https://github.com/sandner-art)
-
+**Project:** [Metacryptography Research](https://metacryptography.openresearch.uk/)
 
 By implementing a **Predator-Prey** dynamic, we stop treating the fractal as a static picture and start treating it as an **Ecosystem**.
 
@@ -14,6 +14,7 @@ This approach reveals the **Functional Regions** of the fractal:
 
 The resulting image will be a **"Habitat Map"** of the Mandelbrot set.
 
+![Predator Prey Fractal sketch by Daniel Sandner](predator_prey_fractal.png)
 ### The Algorithm: Ecosystem Dynamics
 We will run a physics simulation with two distinct species interacting with the **Potential Field** ($P$) of the fractal.
 
